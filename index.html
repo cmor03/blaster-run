@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blaster Run</title>
+    <link rel="stylesheet" href="blasterrun.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="hud">
+            <div class="score">Score: <span id="scoreValue">0</span></div>
+            <div class="health">Health: <span id="healthValue">100</span></div>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="menu" id="mainMenu">
+            <h1>Blaster Run</h1>
+            <button id="startButton">Start Game</button>
+            <button id="instructionsButton">Instructions</button>
+        </div>
+        
+        <div class="menu" id="gameOverMenu" style="display: none;">
+            <h2>Game Over</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="restartButton">Play Again</button>
+        </div>
+    </div>
+
+    <script src="blasterrun.js"></script>
+</body>
+</html> 
