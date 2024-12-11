@@ -74,11 +74,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = CANVAS_WIDTH;
         this.canvas.height = CANVAS_HEIGHT;
-        
-        
-        this.state = 'menu';
-        // create player at top left corner
-        this.player = new Player(TILE_SIZE, TILE_SIZE);
+
         // spawn enemies roughly in each corner
         this.enemies = [
             new Enemy(6 * TILE_SIZE, 5 * TILE_SIZE),
@@ -87,6 +83,11 @@ class Game {
             new Enemy(20 * TILE_SIZE, 15 * TILE_SIZE),
             new Enemy(25 * TILE_SIZE, 3 * TILE_SIZE)
         ];
+        
+        this.state = 'menu';
+        // create player at top left corner
+        this.player = new Blaster(TILE_SIZE, TILE_SIZE);
+
         // initialize vallues
         this.carrots = 0;
         this.timeLeft = GAME_TIME;
@@ -155,14 +156,14 @@ class Game {
 
     // start game
     startGame() {
+            // reset map
+            LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
+            this.player.reset();
+            this.enemies.forEach(enemy => enemy.reset());
         this.state = 'playing';
         this.carrots = 0;
         this.timeLeft = GAME_TIME;
         this.tntRemaining = 5;
-        // reset map
-        LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
-        this.player.reset();
-        this.enemies.forEach(enemy => enemy.reset());
         // hide menu
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('gameOverMenu').style.display = 'none';
@@ -330,7 +331,7 @@ class Game {
 }
 
 // blaster class
-class Player {
+class Blaster {
     constructor(x, y) {
         this.startX = x;
         this.startY = y;
