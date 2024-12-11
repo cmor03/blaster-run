@@ -1,3 +1,4 @@
+// consts
 const TILE_SIZE = 60;
 const GRID_WIDTH = 30;
 const GRID_HEIGHT = 20;
@@ -8,10 +9,10 @@ const REQUIRED_CARROTS = 15;
 const ENEMY_MOVE_INTERVAL = 500;
 const TNT_COOLDOWN = 1000;
 const ENEMY_SIZE = TILE_SIZE * 2.5;
-const EXPLOSION_DURATION = 1000;
 const PARTICLE_COUNT = 50;
 const MAX_TNT = 5;
 
+// game types
 const ASSETS = {
     player: null,
     carrot: null,
@@ -22,6 +23,7 @@ const ASSETS = {
     tnt: null
 };
 
+// tile types (used in 2D array)
 const TILE_TYPES = {
     EMPTY: 0,
     WALL: 1,
@@ -31,6 +33,7 @@ const TILE_TYPES = {
     TNT: 5
 };
 
+// directions to move
 const DIRECTIONS = [
     { x: 0, y: -1 },
     { x: 1, y: 0 },
@@ -38,6 +41,7 @@ const DIRECTIONS = [
     { x: -1, y: 0 }
 ];
 
+// starting map
 const ORIGINAL_MAP = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 1, 0, 0, 2, 0, 0, 0, 0, 2, 0, 1],
@@ -61,65 +65,8 @@ const ORIGINAL_MAP = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
+// parse the 2d array
 let LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
-
-class Explosion {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.particles = [];
-        this.startTime = performance.now();
-        this.createParticles();
-    }
-
-    createParticles() {
-        // Fewer particles, smaller sizes
-        for (let i = 0; i < 15; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 0.5 + Math.random() * 3; // Reduced speed
-            this.particles.push({
-                x: this.x,
-                y: this.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                size: 5 + Math.random() * 8, // Smaller particles
-                life: 1.0,
-                color: Math.random() > 0.5 ? '#FF0000' : '#FFA500'
-            });
-        }
-    }
-
-    update() {
-        const elapsed = performance.now() - this.startTime;
-        const progress = elapsed / (EXPLOSION_DURATION * 0.7); // Shorter duration
-
-        if (progress >= 1) return false;
-
-        this.particles.forEach(particle => {
-            particle.x += particle.vx + (Math.random() - 0.5);
-            particle.y += particle.vy + (Math.random() - 0.5);
-            particle.life = 1 - progress;
-            particle.vy += 0.1; // Reduced gravity
-        });
-
-        return true;
-    }
-
-    draw(ctx) {
-        ctx.save();
-        this.particles.forEach(particle => {
-            ctx.globalAlpha = particle.life;
-            ctx.fillStyle = particle.color;
-            ctx.fillRect(
-                particle.x - particle.size/2, 
-                particle.y - particle.size/2, 
-                particle.size, 
-                particle.size
-            );
-        });
-        ctx.restore();
-    }
-}
 
 class Game {
     constructor() {
@@ -128,11 +75,11 @@ class Game {
         this.canvas.width = CANVAS_WIDTH;
         this.canvas.height = CANVAS_HEIGHT;
         
-        this.ctx.imageSmoothingEnabled = true;
-        this.ctx.imageSmoothingQuality = 'high';
         
         this.state = 'menu';
+        // create player at top left corner
         this.player = new Player(TILE_SIZE, TILE_SIZE);
+        // spawn enemies roughly in each corner
         this.enemies = [
             new Enemy(6 * TILE_SIZE, 5 * TILE_SIZE),
             new Enemy(14 * TILE_SIZE, 8 * TILE_SIZE),
@@ -140,17 +87,18 @@ class Game {
             new Enemy(20 * TILE_SIZE, 15 * TILE_SIZE),
             new Enemy(25 * TILE_SIZE, 3 * TILE_SIZE)
         ];
+        // initialize vallues
         this.carrots = 0;
         this.timeLeft = GAME_TIME;
         this.lastTime = 0;
-        this.explosions = [];
         this.lastTNTTime = 0;
-        this.tntRemaining = MAX_TNT;
+        this.tntRemaining = 5;
         
         this.loadAssets();
         this.initializeEventListeners();
     }
 
+    // load assets as images
     async loadAssets() {
         const loadImage = (src) => {
             return new Promise((resolve) => {
@@ -169,6 +117,7 @@ class Game {
         ASSETS.tnt = await loadImage('images/tnt.png');
     }
 
+    // add event listener to buttons and keyboard keys
     initializeEventListeners() {
         document.getElementById('startButton').addEventListener('click', () => this.startGame());
         document.getElementById('restartButton').addEventListener('click', () => this.startGame());
@@ -176,6 +125,7 @@ class Game {
         window.addEventListener('keydown', (e) => {
             if (this.state !== 'playing') return;
             
+            // can move with arrows or wasd
             switch(e.key) {
                 case 'ArrowUp':
                 case 'w':
@@ -196,23 +146,24 @@ class Game {
                 case ' ':
                     this.placeTNT(performance.now());
                     break;
+                default:
+                    break;
             }
         });
     }
 
-    resetMap() {
-        // Reset the map to its original state
-        LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
-    }
 
+    // start game
     startGame() {
         this.state = 'playing';
         this.carrots = 0;
         this.timeLeft = GAME_TIME;
-        this.tntRemaining = MAX_TNT;
-        this.resetMap();
+        this.tntRemaining = 5;
+        // reset map
+        LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
         this.player.reset();
         this.enemies.forEach(enemy => enemy.reset());
+        // hide menu
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('gameOverMenu').style.display = 'none';
         this.lastTime = performance.now();
@@ -220,51 +171,57 @@ class Game {
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
+    // update tnt to reflect how many remaining
     updateTNTDisplay() {
         for (let i = 1; i <= MAX_TNT; i++) {
             const tntIcon = document.getElementById(`tnt${i}`);
             if (tntIcon) {
+                // update used. if used, css makes lowers opacity to give greyed out look
                 tntIcon.classList.toggle('used', i > this.tntRemaining);
             }
         }
     }
 
+    
     gameLoop(timestamp) {
         if (this.state !== 'playing') return;
 
         const deltaTime = (timestamp - this.lastTime) / 1000;
         this.lastTime = timestamp;
 
-        // Update time
+        // update time
         this.timeLeft -= deltaTime;
         if (this.timeLeft <= 0) {
             this.gameOver('Time\'s up!');
             return;
         }
-
+    
+        // update game
         this.update();
 
+        // clear old canvas
         this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+        // redraw
         this.draw();
 
         this.updateHUD();
 
-        if (this.checkWinCondition()) {
-            this.win();
-            return;
-        }
+        // // check if player won
+        // if ((LEVEL_MAP[Math.floor(this.player.y / TILE_SIZE)][Math.floor(this.player.x / TILE_SIZE)] === TILE_TYPES.GATE) && this.carrots >= REQUIRED_CARROTS) {
+        //     this.win();
+        //     return;
+        // }
 
+        // recursively call gameloop
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
     update() {
         const currentTime = performance.now();
         
-        // Update explosions
-        this.explosions = this.explosions.filter(explosion => explosion.update());
 
-        // Update enemies
+        // update each enemies
         this.enemies.forEach(enemy => {
             enemy.update(LEVEL_MAP, this.player, currentTime);
             if (enemy.checkCollision(this.player)) {
@@ -272,86 +229,79 @@ class Game {
             }
         });
 
-        // Check for carrot collection
+
+        // check for carrot collision (if picked up)
         const playerTile = LEVEL_MAP[Math.floor(this.player.y / TILE_SIZE)][Math.floor(this.player.x / TILE_SIZE)];
         if (playerTile === TILE_TYPES.CARROT) {
             this.carrots++;
+            // remove carrot from this tile
             LEVEL_MAP[Math.floor(this.player.y / TILE_SIZE)][Math.floor(this.player.x / TILE_SIZE)] = TILE_TYPES.EMPTY;
         }
 
-        // Check for trap collision
+        // check for trap collision (rare because they are stationary)
         if (playerTile === TILE_TYPES.TRAP) {
             this.gameOver('Fell into a trap!');
         }
 
-        // Check for gate (win condition)
+        // check if player meets win requirements (has enough carrots and is on gate tile)
         if (playerTile === TILE_TYPES.GATE && this.carrots >= REQUIRED_CARROTS) {
             this.win();
         }
     }
 
     draw() {
-        // Clear with background
         this.ctx.fillStyle = '#8FBC8F';
         this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        // Draw map
+        // draw map
         for (let y = 0; y < GRID_HEIGHT; y++) {
             for (let x = 0; x < GRID_WIDTH; x++) {
                 const tile = LEVEL_MAP[y][x];
                 const xPos = x * TILE_SIZE;
                 const yPos = y * TILE_SIZE;
 
-                switch (tile) {
-                    case TILE_TYPES.WALL:
-                        this.ctx.drawImage(ASSETS.wall, xPos, yPos, TILE_SIZE, TILE_SIZE);
-                        break;
-                    case TILE_TYPES.CARROT:
-                        this.ctx.drawImage(ASSETS.carrot, xPos, yPos, TILE_SIZE, TILE_SIZE);
-                        break;
-                    case TILE_TYPES.TRAP:
-                        this.ctx.drawImage(ASSETS.trap, xPos, yPos, TILE_SIZE, TILE_SIZE);
-                        break;
-                    case TILE_TYPES.GATE:
-                        this.ctx.drawImage(ASSETS.gate, xPos, yPos, TILE_SIZE, TILE_SIZE);
-                        break;
-                    case TILE_TYPES.TNT:
-                        this.ctx.drawImage(ASSETS.tnt, xPos, yPos, TILE_SIZE, TILE_SIZE);
-                        break;
+                // draw appropriate asset at appropriate location
+                if (tile == TILE_TYPES.WALL) {
+                    this.ctx.drawImage(ASSETS.wall, xPos, yPos, TILE_SIZE, TILE_SIZE);
+                } else if (tile == TILE_TYPES.CARROT) {
+                    this.ctx.drawImage(ASSETS.carrot, xPos, yPos, TILE_SIZE, TILE_SIZE);
+                } else if (tile == TILE_TYPES.TRAP) {
+                    this.ctx.drawImage(ASSETS.trap, xPos, yPos, TILE_SIZE, TILE_SIZE);
+                } else if (tile == TILE_TYPES.GATE) {
+                    this.ctx.drawImage(ASSETS.gate, xPos, yPos, TILE_SIZE, TILE_SIZE);
+                } else if (tile == TILE_TYPES.TNT) {
+                    this.ctx.drawImage(ASSETS.tnt, xPos, yPos, TILE_SIZE, TILE_SIZE);
                 }
             }
         }
 
-        // Draw player
+        // draw player
         this.player.draw(this.ctx);
 
-        // Draw enemies
+        // draw enemies
         this.enemies.forEach(enemy => enemy.draw(this.ctx));
 
-        // Draw explosions on top
-        this.explosions.forEach(explosion => explosion.draw(this.ctx));
+
     }
 
     updateHUD() {
+        // update health and score
         document.getElementById('scoreValue').textContent = `${this.carrots}/${REQUIRED_CARROTS}`;
         document.getElementById('healthValue').textContent = Math.ceil(this.timeLeft);
     }
 
-    checkWinCondition() {
-        const playerTile = LEVEL_MAP[Math.floor(this.player.y / TILE_SIZE)][Math.floor(this.player.x / TILE_SIZE)];
-        return playerTile === TILE_TYPES.GATE && this.carrots >= REQUIRED_CARROTS;
-    }
-
     gameOver(reason) {
+        // show game over screen with reason
         this.state = 'gameOver';
         document.getElementById('gameOverMenu').style.display = 'block';
         document.getElementById('gameOverText').style.color = "#FF4500";
         document.getElementById('gameOverText').textContent = "Game Over";
         document.getElementById('finalScore').textContent = `${this.carrots} carrots - ${reason}`;
-        this.resetMap();
+        LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
     }
 
     win() {
+        // show game over screen but Win verson
         this.state = 'gameOver';
         document.getElementById('gameOverMenu').style.display = 'block';
         document.getElementById('gameOverText').style.color = "#56D643";
@@ -359,10 +309,7 @@ class Game {
         document.getElementById('finalScore').textContent = `Victory! Escaped with ${this.carrots} carrots!`;
     }
 
-    addExplosion(x, y) {
-        this.explosions.push(new Explosion(x, y));
-    }
-
+    // place tnt if past 1 second cooldown and available
     placeTNT(currentTime) {
         if (currentTime - this.lastTNTTime < TNT_COOLDOWN) return false;
         if (this.tntRemaining <= 0) return false;
@@ -370,6 +317,7 @@ class Game {
         const playerGridX = Math.floor(this.player.x / TILE_SIZE);
         const playerGridY = Math.floor(this.player.y / TILE_SIZE);
 
+        // can only place tnt on empty tile
         if (LEVEL_MAP[playerGridY][playerGridX] === TILE_TYPES.EMPTY) {
             LEVEL_MAP[playerGridY][playerGridX] = TILE_TYPES.TNT;
             this.lastTNTTime = currentTime;
@@ -381,6 +329,7 @@ class Game {
     }
 }
 
+// blaster class
 class Player {
     constructor(x, y) {
         this.startX = x;
@@ -389,11 +338,13 @@ class Player {
         this.reset();
     }
 
+
     reset() {
         this.x = this.startX;
         this.y = this.startY;
     }
 
+    // move in indicated direction
     move(dx, dy, levelMap) {
         const newX = this.x + dx * TILE_SIZE;
         const newY = this.y + dy * TILE_SIZE;
@@ -410,37 +361,13 @@ class Player {
         }
     }
 
-    bite(enemies, currentTime) {
-
-        if (currentTime - this.lastBiteTime < BITE_COOLDOWN) return false;
-
-        const playerGridX = Math.floor(this.x / TILE_SIZE);
-        const playerGridY = Math.floor(this.y / TILE_SIZE);
-        let biteHit = false;
-
-        enemies.forEach(enemy => {
-            if (!enemy.isAlive) return;
-
-            const dx = Math.abs(enemy.gridX - playerGridX);
-            const dy = Math.abs(enemy.gridY - playerGridY);
-            
-            if (dx <= BITE_RANGE && dy <= BITE_RANGE) {
-                enemy.isAlive = false;
-                biteHit = true;
-            }
-        });
-
-        if (biteHit) {
-            this.lastBiteTime = currentTime;
-        }
-        return biteHit;
-    }
-
+    // draw donkey png
     draw(ctx) {
         ctx.drawImage(ASSETS.player, this.x, this.y, TILE_SIZE, TILE_SIZE);
     }
 }
 
+// enemies class 
 class Enemy {
     constructor(x, y) {
         this.gridX = Math.floor(x / TILE_SIZE);
@@ -461,17 +388,18 @@ class Enemy {
         this.isAlive = true;
     }
 
+    // move enemy towards blaster and check collisions
     update(levelMap, player, currentTime) {
         if (!this.isAlive) return;
 
+        // move only every 500ms
         if (currentTime - this.lastMoveTime < ENEMY_MOVE_INTERVAL) return;
 
-        // Check for TNT collision
+        // check if stepped on tnt
         const currentTile = levelMap[this.gridY][this.gridX];
         if (currentTile === TILE_TYPES.TNT) {
             this.isAlive = false;
             levelMap[this.gridY][this.gridX] = TILE_TYPES.EMPTY;
-            game.addExplosion(this.screenX + ENEMY_SIZE/2, this.screenY + ENEMY_SIZE/2);
             return;
         }
 
@@ -481,15 +409,19 @@ class Enemy {
         let bestDirection = null;
         let bestDistance = Infinity;
 
+        /* PATHFINDING! */
+        // chcek each direction and see which decreases distance to player
         for (const dir of DIRECTIONS) {
             const newX = this.gridX + dir.x;
             const newY = this.gridY + dir.y;
 
+            // if in bounds and not a wall
             if (newX >= 0 && newX < GRID_WIDTH && 
                 newY >= 0 && newY < GRID_HEIGHT && 
                 levelMap[newY][newX] !== TILE_TYPES.WALL) {
                 
                 const distance = Math.abs(newX - playerGridX) + Math.abs(newY - playerGridY);
+                // if distance is lowest with this move, set direction
                 if (distance < bestDistance) {
                     bestDistance = distance;
                     bestDirection = dir;
@@ -497,6 +429,7 @@ class Enemy {
             }
         }
 
+        // move in best direction, if found
         if (bestDirection) {
             this.gridX += bestDirection.x;
             this.gridY += bestDirection.y;
@@ -506,18 +439,14 @@ class Enemy {
         }
     }
 
+    // draw enemy if not dead.
     draw(ctx) {
         if (!this.isAlive) return;
         
-        // Draw massive enemy with offset to center it
+        // draw enemy with offset to center it
         const offsetX = (ENEMY_SIZE - TILE_SIZE) / 2;
         const offsetY = (ENEMY_SIZE - TILE_SIZE) / 2;
         
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 30;
-        ctx.shadowOffsetX = 10;
-        ctx.shadowOffsetY = 10;
         
         ctx.drawImage(ASSETS.enemy, 
             this.screenX - offsetX, 
@@ -529,20 +458,22 @@ class Enemy {
         ctx.restore();
     }
 
+    // check if hit player (if alive)
     checkCollision(player) {
         if (!this.isAlive) return false;
         
         const playerGridX = Math.floor(player.x / TILE_SIZE);
         const playerGridY = Math.floor(player.y / TILE_SIZE);
         
-        // Increased collision box for massive enemies
+        
         const dx = Math.abs(this.gridX - playerGridX);
         const dy = Math.abs(this.gridY - playerGridY);
-        return dx <= 1 && dy <= 1; // Larger collision area
+        // if one away, collision happened (might make this zero to make itt more realistic)
+        return dx <= 1 && dy <= 1; 
     }
 }
 
-// Initialize game when window loads
+// on load, start game
 window.onload = () => {
     window.game = new Game();
 }; 

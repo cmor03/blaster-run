@@ -1,17 +1,15 @@
-/* Modern CSS Reset */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* google font */
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
 body {
     font-family: 'Fredoka', sans-serif;
-    background: linear-gradient(135deg, #8B4513 0%, #654321 100%);
-    background-image: url('images/wood-texture.png'), linear-gradient(135deg, #8B4513 0%, #654321 100%);
-    background-blend-mode: multiply;
+    background-color: #09396C;
     color: #2C1810;
     min-height: 100vh;
     display: flex;
@@ -25,10 +23,8 @@ body {
     width: 1800px;
     height: 1230px;
     background: #F4EAD5;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.4),
-                inset 0 0 20px rgba(139, 69, 19, 0.3);
     border-radius: 15px;
-    border: 8px solid #5C3A21;
+    border: 8px solid #09396C;
     overflow: hidden;
     max-width: 95vw;
     max-height: 95vh;
@@ -36,9 +32,9 @@ body {
 }
 
 #gameCanvas {
-    background: #90B77D; /* Stardew grass color */
+    background: #CFDCE9;
     width: 100%;
-    height: calc(100% - 30px);
+    height: calc(100% - 30px); /* make size most of the window */
     object-fit: contain;
     position: absolute;
     bottom: 0;
@@ -48,7 +44,7 @@ body {
     position: absolute;
     top: 0;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%); /* center */
     z-index: 10;
     display: flex;
     gap: 30px;
@@ -57,9 +53,8 @@ body {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     background: rgba(244, 234, 213, 0.95);
     padding: 5px 30px;
-    border-radius: 0 0 35px 35px;
     color: #2C1810;
-    border: 4px solid #5C3A21;
+    border: 4px solid #09396C;
     border-top: none;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     align-items: center;
@@ -93,7 +88,7 @@ body {
     text-align: center;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     min-width: 400px;
-    border: 6px solid #5C3A21;
+    border: 6px solid #09396C;
 }
 
 .menu h1 {
@@ -106,7 +101,7 @@ body {
 
 .menu p {
     margin-bottom: 1.5em;
-    color: #5C3A21;
+    color: #09396C;
     line-height: 1.6;
     font-size: 1.2em;
 }
@@ -118,13 +113,13 @@ body {
     margin: 1.5em 0;
     text-align: left;
     font-size: 1.1em;
-    border: 3px solid #5C3A21;
+    border: 3px solid #09396C;
     color: #2C1810;
 }
 
 button {
-    background: linear-gradient(45deg, #D35400, #E67E22);
-    border: 4px solid #A04000;
+    background-color: #CC4628;
+    border: 4px solid rgb(120, 50, 4);
     padding: 15px 30px;
     margin: 15px;
     border-radius: 35px;
@@ -137,15 +132,10 @@ button {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(211, 84, 0, 0.3);
-    background: linear-gradient(45deg, #E67E22, #F39C12);
-}
 
 button:active {
     transform: translateY(0);
-    box-shadow: 0 4px 10px rgba(211, 84, 0, 0.3);
+    box-shadow: 0 4px 10px #CC4628;
 }
 
 #gameOverMenu {
@@ -153,74 +143,8 @@ button:active {
 }
 
 #gameOverMenu h2 {
-    color: #D35400;
+    color: #000000;
     font-size: 2.5em;
     margin-bottom: 0.5em;
     font-weight: 600;
 }
-
-/* Responsive Design */
-@media (max-width: 1920px) {
-    .game-container {
-        width: 95vw;
-        height: calc(95vw * 2/3);
-        border-width: 6px;
-    }
-    
-    .menu h1 {
-        font-size: 2.5em;
-    }
-    
-    .instructions {
-        font-size: 1em;
-    }
-    
-    button {
-        font-size: 1.2em;
-        padding: 12px 24px;
-        border-width: 3px;
-    }
-}
-
-@media (max-width: 768px) {
-    .menu {
-        min-width: 300px;
-        padding: 2em;
-        border-width: 4px;
-    }
-    
-    .menu h1 {
-        font-size: 2em;
-    }
-    
-    .hud {
-        font-size: 1.2em;
-        padding: 10px 20px;
-        border-width: 3px;
-    }
-    
-    button {
-        font-size: 1.1em;
-        padding: 10px 20px;
-        border-width: 3px;
-    }
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 12px;
-}
-
-::-webkit-scrollbar-track {
-    background: #F4EAD5;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #5C3A21;
-    border-radius: 6px;
-    border: 3px solid #F4EAD5;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #8B4513;
-} 
