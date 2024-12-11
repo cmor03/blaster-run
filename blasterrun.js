@@ -6,10 +6,11 @@ const CANVAS_HEIGHT = GRID_HEIGHT * TILE_SIZE;
 const GAME_TIME = 180;
 const REQUIRED_CARROTS = 15;
 const ENEMY_MOVE_INTERVAL = 500;
-const TNT_COOLDOWN = 4000;
+const TNT_COOLDOWN = 1000;
 const ENEMY_SIZE = TILE_SIZE * 2.5;
 const EXPLOSION_DURATION = 1000;
 const PARTICLE_COUNT = 50;
+const MAX_TNT = 5;
 
 const ASSETS = {
     player: null,
@@ -72,30 +73,33 @@ class Explosion {
     }
 
     createParticles() {
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            const angle = (Math.PI * 2 * i) / PARTICLE_COUNT;
-            const speed = 2 + Math.random() * 3;
+        // Fewer particles, smaller sizes
+        for (let i = 0; i < 15; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.5 + Math.random() * 3; // Reduced speed
             this.particles.push({
                 x: this.x,
                 y: this.y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
+                size: 5 + Math.random() * 8, // Smaller particles
                 life: 1.0,
-                color: `hsl(${Math.random() * 30 + 15}, 100%, 50%)`
+                color: Math.random() > 0.5 ? '#FF0000' : '#FFA500'
             });
         }
     }
 
     update() {
         const elapsed = performance.now() - this.startTime;
-        const progress = elapsed / EXPLOSION_DURATION;
+        const progress = elapsed / (EXPLOSION_DURATION * 0.7); // Shorter duration
 
         if (progress >= 1) return false;
 
         this.particles.forEach(particle => {
-            particle.x += particle.vx;
-            particle.y += particle.vy;
+            particle.x += particle.vx + (Math.random() - 0.5);
+            particle.y += particle.vy + (Math.random() - 0.5);
             particle.life = 1 - progress;
+            particle.vy += 0.1; // Reduced gravity
         });
 
         return true;
@@ -106,9 +110,12 @@ class Explosion {
         this.particles.forEach(particle => {
             ctx.globalAlpha = particle.life;
             ctx.fillStyle = particle.color;
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, TILE_SIZE / 4, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillRect(
+                particle.x - particle.size/2, 
+                particle.y - particle.size/2, 
+                particle.size, 
+                particle.size
+            );
         });
         ctx.restore();
     }
@@ -138,6 +145,7 @@ class Game {
         this.lastTime = 0;
         this.explosions = [];
         this.lastTNTTime = 0;
+        this.tntRemaining = MAX_TNT;
         
         this.loadAssets();
         this.initializeEventListeners();
@@ -201,13 +209,24 @@ class Game {
         this.state = 'playing';
         this.carrots = 0;
         this.timeLeft = GAME_TIME;
+        this.tntRemaining = MAX_TNT;
         this.resetMap();
         this.player.reset();
         this.enemies.forEach(enemy => enemy.reset());
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('gameOverMenu').style.display = 'none';
         this.lastTime = performance.now();
+        this.updateTNTDisplay();
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+    }
+
+    updateTNTDisplay() {
+        for (let i = 1; i <= MAX_TNT; i++) {
+            const tntIcon = document.getElementById(`tnt${i}`);
+            if (tntIcon) {
+                tntIcon.classList.toggle('used', i > this.tntRemaining);
+            }
+        }
     }
 
     gameLoop(timestamp) {
@@ -346,6 +365,7 @@ class Game {
 
     placeTNT(currentTime) {
         if (currentTime - this.lastTNTTime < TNT_COOLDOWN) return false;
+        if (this.tntRemaining <= 0) return false;
 
         const playerGridX = Math.floor(this.player.x / TILE_SIZE);
         const playerGridY = Math.floor(this.player.y / TILE_SIZE);
@@ -353,6 +373,8 @@ class Game {
         if (LEVEL_MAP[playerGridY][playerGridX] === TILE_TYPES.EMPTY) {
             LEVEL_MAP[playerGridY][playerGridX] = TILE_TYPES.TNT;
             this.lastTNTTime = currentTime;
+            this.tntRemaining--;
+            this.updateTNTDisplay();
             return true;
         }
         return false;
