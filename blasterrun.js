@@ -326,6 +326,8 @@ class Game {
     gameOver(reason) {
         this.state = 'gameOver';
         document.getElementById('gameOverMenu').style.display = 'block';
+        document.getElementById('gameOverText').style.color = "#FF4500";
+        document.getElementById('gameOverText').textContent = "Game Over";
         document.getElementById('finalScore').textContent = `${this.carrots} carrots - ${reason}`;
         this.resetMap();
     }
@@ -333,6 +335,8 @@ class Game {
     win() {
         this.state = 'gameOver';
         document.getElementById('gameOverMenu').style.display = 'block';
+        document.getElementById('gameOverText').style.color = "#56D643";
+        document.getElementById('gameOverText').textContent = "You win!";
         document.getElementById('finalScore').textContent = `Victory! Escaped with ${this.carrots} carrots!`;
     }
 
