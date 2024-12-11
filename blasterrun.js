@@ -1,44 +1,42 @@
-// Game Constants
 const TILE_SIZE = 60;
 const GRID_WIDTH = 30;
 const GRID_HEIGHT = 20;
 const CANVAS_WIDTH = GRID_WIDTH * TILE_SIZE;
 const CANVAS_HEIGHT = GRID_HEIGHT * TILE_SIZE;
-const GAME_TIME = 180; // 3 minutes in seconds
+const GAME_TIME = 180;
 const REQUIRED_CARROTS = 15;
-const ENEMY_MOVE_INTERVAL = 500; // Enemy moves every 500ms
-const BITE_RANGE = 1; // Can bite enemies 1 tile away
-const BITE_COOLDOWN = 1000; // 1 second cooldown between bites
-const ENEMY_SIZE = TILE_SIZE * 2; // Enemies are 2x the tile size
+const ENEMY_MOVE_INTERVAL = 500;
+const TNT_COOLDOWN = 4000;
+const ENEMY_SIZE = TILE_SIZE * 2.5;
+const EXPLOSION_DURATION = 1000;
+const PARTICLE_COUNT = 50;
 
-// Game assets
 const ASSETS = {
     player: null,
     carrot: null,
     enemy: null,
     trap: null,
     gate: null,
-    wall: null
+    wall: null,
+    tnt: null
 };
 
-// Tile types
 const TILE_TYPES = {
     EMPTY: 0,
     WALL: 1,
     CARROT: 2,
     TRAP: 3,
-    GATE: 4
+    GATE: 4,
+    TNT: 5
 };
 
-// Direction vectors for enemy movement
 const DIRECTIONS = [
-    { x: 0, y: -1 }, // Up
-    { x: 1, y: 0 },  // Right
-    { x: 0, y: 1 },  // Down
-    { x: -1, y: 0 }  // Left
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 }
 ];
 
-// Original map to use for resets
 const ORIGINAL_MAP = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 1, 0, 0, 2, 0, 0, 0, 0, 2, 0, 1],
@@ -62,8 +60,59 @@ const ORIGINAL_MAP = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-// Current map that will be modified during gameplay
 let LEVEL_MAP = JSON.parse(JSON.stringify(ORIGINAL_MAP));
+
+class Explosion {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.particles = [];
+        this.startTime = performance.now();
+        this.createParticles();
+    }
+
+    createParticles() {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const angle = (Math.PI * 2 * i) / PARTICLE_COUNT;
+            const speed = 2 + Math.random() * 3;
+            this.particles.push({
+                x: this.x,
+                y: this.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1.0,
+                color: `hsl(${Math.random() * 30 + 15}, 100%, 50%)`
+            });
+        }
+    }
+
+    update() {
+        const elapsed = performance.now() - this.startTime;
+        const progress = elapsed / EXPLOSION_DURATION;
+
+        if (progress >= 1) return false;
+
+        this.particles.forEach(particle => {
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.life = 1 - progress;
+        });
+
+        return true;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        this.particles.forEach(particle => {
+            ctx.globalAlpha = particle.life;
+            ctx.fillStyle = particle.color;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, TILE_SIZE / 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+}
 
 class Game {
     constructor() {
@@ -72,7 +121,6 @@ class Game {
         this.canvas.width = CANVAS_WIDTH;
         this.canvas.height = CANVAS_HEIGHT;
         
-        // Enable image smoothing for better scaling
         this.ctx.imageSmoothingEnabled = true;
         this.ctx.imageSmoothingQuality = 'high';
         
@@ -88,6 +136,8 @@ class Game {
         this.carrots = 0;
         this.timeLeft = GAME_TIME;
         this.lastTime = 0;
+        this.explosions = [];
+        this.lastTNTTime = 0;
         
         this.loadAssets();
         this.initializeEventListeners();
@@ -108,6 +158,7 @@ class Game {
         ASSETS.trap = await loadImage('images/trap.png');
         ASSETS.gate = await loadImage('images/gate.png');
         ASSETS.wall = await loadImage('images/wall.png');
+        ASSETS.tnt = await loadImage('images/tnt.png');
     }
 
     initializeEventListeners() {
@@ -135,7 +186,7 @@ class Game {
                     this.player.move(1, 0, LEVEL_MAP);
                     break;
                 case ' ':
-                    this.player.bite(this.enemies, performance.now());
+                    this.placeTNT(performance.now());
                     break;
             }
         });
@@ -172,19 +223,14 @@ class Game {
             return;
         }
 
-        // Update game objects
         this.update();
 
-        // Clear canvas
         this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        // Draw game
         this.draw();
 
-        // Update HUD
         this.updateHUD();
 
-        // Check win condition
         if (this.checkWinCondition()) {
             this.win();
             return;
@@ -196,6 +242,9 @@ class Game {
     update() {
         const currentTime = performance.now();
         
+        // Update explosions
+        this.explosions = this.explosions.filter(explosion => explosion.update());
+
         // Update enemies
         this.enemies.forEach(enemy => {
             enemy.update(LEVEL_MAP, this.player, currentTime);
@@ -247,6 +296,9 @@ class Game {
                     case TILE_TYPES.GATE:
                         this.ctx.drawImage(ASSETS.gate, xPos, yPos, TILE_SIZE, TILE_SIZE);
                         break;
+                    case TILE_TYPES.TNT:
+                        this.ctx.drawImage(ASSETS.tnt, xPos, yPos, TILE_SIZE, TILE_SIZE);
+                        break;
                 }
             }
         }
@@ -254,8 +306,11 @@ class Game {
         // Draw player
         this.player.draw(this.ctx);
 
-        // Draw enemies last (on top)
+        // Draw enemies
         this.enemies.forEach(enemy => enemy.draw(this.ctx));
+
+        // Draw explosions on top
+        this.explosions.forEach(explosion => explosion.draw(this.ctx));
     }
 
     updateHUD() {
@@ -272,13 +327,31 @@ class Game {
         this.state = 'gameOver';
         document.getElementById('gameOverMenu').style.display = 'block';
         document.getElementById('finalScore').textContent = `${this.carrots} carrots - ${reason}`;
-        this.resetMap(); // Reset the map when game is over
+        this.resetMap();
     }
 
     win() {
         this.state = 'gameOver';
         document.getElementById('gameOverMenu').style.display = 'block';
         document.getElementById('finalScore').textContent = `Victory! Escaped with ${this.carrots} carrots!`;
+    }
+
+    addExplosion(x, y) {
+        this.explosions.push(new Explosion(x, y));
+    }
+
+    placeTNT(currentTime) {
+        if (currentTime - this.lastTNTTime < TNT_COOLDOWN) return false;
+
+        const playerGridX = Math.floor(this.player.x / TILE_SIZE);
+        const playerGridY = Math.floor(this.player.y / TILE_SIZE);
+
+        if (LEVEL_MAP[playerGridY][playerGridX] === TILE_TYPES.EMPTY) {
+            LEVEL_MAP[playerGridY][playerGridX] = TILE_TYPES.TNT;
+            this.lastTNTTime = currentTime;
+            return true;
+        }
+        return false;
     }
 }
 
@@ -312,7 +385,7 @@ class Player {
     }
 
     bite(enemies, currentTime) {
-        // Check bite cooldown
+
         if (currentTime - this.lastBiteTime < BITE_COOLDOWN) return false;
 
         const playerGridX = Math.floor(this.x / TILE_SIZE);
@@ -322,7 +395,6 @@ class Player {
         enemies.forEach(enemy => {
             if (!enemy.isAlive) return;
 
-            // Check if enemy is within bite range
             const dx = Math.abs(enemy.gridX - playerGridX);
             const dy = Math.abs(enemy.gridY - playerGridY);
             
@@ -351,25 +423,35 @@ class Enemy {
         this.startGridY = this.gridY;
         this.lastMoveTime = 0;
         this.isAlive = true;
+        this.screenX = this.gridX * TILE_SIZE;
+        this.screenY = this.gridY * TILE_SIZE;
     }
 
     reset() {
         this.gridX = this.startGridX;
         this.gridY = this.startGridY;
+        this.screenX = this.gridX * TILE_SIZE;
+        this.screenY = this.gridY * TILE_SIZE;
         this.isAlive = true;
     }
 
     update(levelMap, player, currentTime) {
         if (!this.isAlive) return;
 
-        // Only move if enough time has passed
         if (currentTime - this.lastMoveTime < ENEMY_MOVE_INTERVAL) return;
 
-        // Calculate grid distance to player
+        // Check for TNT collision
+        const currentTile = levelMap[this.gridY][this.gridX];
+        if (currentTile === TILE_TYPES.TNT) {
+            this.isAlive = false;
+            levelMap[this.gridY][this.gridX] = TILE_TYPES.EMPTY;
+            game.addExplosion(this.screenX + ENEMY_SIZE/2, this.screenY + ENEMY_SIZE/2);
+            return;
+        }
+
         const playerGridX = Math.floor(player.x / TILE_SIZE);
         const playerGridY = Math.floor(player.y / TILE_SIZE);
         
-        // Find best direction to move towards player
         let bestDirection = null;
         let bestDistance = Infinity;
 
@@ -377,12 +459,10 @@ class Enemy {
             const newX = this.gridX + dir.x;
             const newY = this.gridY + dir.y;
 
-            // Check if move is valid
             if (newX >= 0 && newX < GRID_WIDTH && 
                 newY >= 0 && newY < GRID_HEIGHT && 
                 levelMap[newY][newX] !== TILE_TYPES.WALL) {
                 
-                // Calculate manhattan distance to player
                 const distance = Math.abs(newX - playerGridX) + Math.abs(newY - playerGridY);
                 if (distance < bestDistance) {
                     bestDistance = distance;
@@ -391,10 +471,11 @@ class Enemy {
             }
         }
 
-        // Move in best direction if found
         if (bestDirection) {
             this.gridX += bestDirection.x;
             this.gridY += bestDirection.y;
+            this.screenX = this.gridX * TILE_SIZE;
+            this.screenY = this.gridY * TILE_SIZE;
             this.lastMoveTime = currentTime;
         }
     }
@@ -402,23 +483,23 @@ class Enemy {
     draw(ctx) {
         if (!this.isAlive) return;
         
-        // Draw enemy at larger size, centered on their grid position
+        // Draw massive enemy with offset to center it
         const offsetX = (ENEMY_SIZE - TILE_SIZE) / 2;
         const offsetY = (ENEMY_SIZE - TILE_SIZE) / 2;
         
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetX = 10;
+        ctx.shadowOffsetY = 10;
+        
         ctx.drawImage(ASSETS.enemy, 
-            this.gridX * TILE_SIZE - offsetX, 
-            this.gridY * TILE_SIZE - offsetY, 
+            this.screenX - offsetX, 
+            this.screenY - offsetY, 
             ENEMY_SIZE, 
             ENEMY_SIZE
         );
-
-        // Optional: Add a shadow effect for the larger enemies
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 20;
-        ctx.shadowOffsetX = 5;
-        ctx.shadowOffsetY = 5;
+        
         ctx.restore();
     }
 
@@ -427,11 +508,11 @@ class Enemy {
         
         const playerGridX = Math.floor(player.x / TILE_SIZE);
         const playerGridY = Math.floor(player.y / TILE_SIZE);
-
-        // Increased collision box for larger enemies
+        
+        // Increased collision box for massive enemies
         const dx = Math.abs(this.gridX - playerGridX);
         const dy = Math.abs(this.gridY - playerGridY);
-        return dx <= 0.8 && dy <= 0.8; // Slightly larger collision area
+        return dx <= 1 && dy <= 1; // Larger collision area
     }
 }
 
