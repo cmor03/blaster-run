@@ -3,28 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blaster Run</title>
+    <title>Blaster's Great Escape</title>
     <link rel="stylesheet" href="blasterrun.css">
 </head>
 <body>
     <div class="game-container">
         <div class="hud">
-            <div class="score">Score: <span id="scoreValue">0</span></div>
-            <div class="health">Health: <span id="healthValue">100</span></div>
+            <div class="score">Carrots: <span id="scoreValue">0/10</span></div>
+            <div class="health">Time: <span id="healthValue">180</span>s</div>
         </div>
         
         <canvas id="gameCanvas"></canvas>
         
         <div class="menu" id="mainMenu">
-            <h1>Blaster Run</h1>
+            <h1>Blaster's Great Escape</h1>
+            <p>Help Blaster collect carrots and escape the maze!</p>
+            <p class="instructions">
+                Use WASD or Arrow Keys to move<br>
+                Collect 10 carrots to unlock the gate<br>
+                Avoid traps and enemies<br>
+                Reach the exit before time runs out!
+            </p>
             <button id="startButton">Start Game</button>
-            <button id="instructionsButton">Instructions</button>
         </div>
         
         <div class="menu" id="gameOverMenu" style="display: none;">
             <h2>Game Over</h2>
-            <p>Final Score: <span id="finalScore">0</span></p>
-            <button id="restartButton">Play Again</button>
+            <p id="finalScore">0 carrots</p>
+            <button id="restartButton">Try Again</button>
         </div>
     </div>
 

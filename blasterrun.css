@@ -1,3 +1,4 @@
+/* Modern CSS Reset */
 * {
     margin: 0;
     padding: 0;
@@ -6,38 +7,48 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #fff;
+    background: linear-gradient(135deg, #87CEEB 0%, #4682B4 100%);
+    color: #333;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 20px;
 }
 
 .game-container {
     position: relative;
-    width: 800px;
-    height: 600px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    width: 1800px;
+    height: 1200px;
+    background: #fff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
     border-radius: 10px;
     overflow: hidden;
+    max-width: 95vw;
+    max-height: 95vh;
+    aspect-ratio: 3/2;
 }
 
 #gameCanvas {
-    background: #000;
+    background: #8FBC8F;
     width: 100%;
     height: 100%;
+    object-fit: contain;
 }
 
 .hud {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 30px;
+    left: 30px;
     z-index: 10;
     display: flex;
-    gap: 20px;
-    font-size: 1.2em;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    gap: 30px;
+    font-size: 1.5em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px 30px;
+    border-radius: 35px;
+    color: #333;
 }
 
 .menu {
@@ -45,44 +56,102 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
-    padding: 2em;
-    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 3em;
+    border-radius: 25px;
     text-align: center;
-    backdrop-filter: blur(5px);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+    min-width: 400px;
 }
 
 .menu h1 {
     font-size: 3em;
     margin-bottom: 0.5em;
-    color: #fff;
-    text-shadow: 0 0 10px #00ff00;
+    color: #333;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.menu p {
+    margin-bottom: 1.5em;
+    color: #666;
+    line-height: 1.6;
+    font-size: 1.2em;
+}
+
+.instructions {
+    background: #f5f5f5;
+    padding: 1.5em;
+    border-radius: 15px;
+    margin: 1.5em 0;
+    text-align: left;
+    font-size: 1.1em;
 }
 
 button {
-    background: linear-gradient(45deg, #00ff00, #00cc00);
+    background: linear-gradient(45deg, #FFA500, #FF8C00);
     border: none;
-    padding: 12px 24px;
-    margin: 10px;
-    border-radius: 25px;
+    padding: 15px 30px;
+    margin: 15px;
+    border-radius: 35px;
     color: white;
-    font-size: 1.1em;
+    font-size: 1.3em;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
 button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(255, 165, 0, 0.3);
 }
 
 #gameOverMenu {
     display: none;
 }
 
-@media (max-width: 850px) {
+#gameOverMenu h2 {
+    color: #FF4500;
+    font-size: 2.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Responsive Design */
+@media (max-width: 1920px) {
     .game-container {
         width: 95vw;
-        height: 71.25vw;
+        height: calc(95vw * 2/3);
+    }
+    
+    .menu h1 {
+        font-size: 2.5em;
+    }
+    
+    .instructions {
+        font-size: 1em;
+    }
+    
+    button {
+        font-size: 1.2em;
+        padding: 12px 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .menu {
+        min-width: 300px;
+        padding: 2em;
+    }
+    
+    .menu h1 {
+        font-size: 2em;
+    }
+    
+    .hud {
+        font-size: 1.2em;
+        padding: 10px 20px;
+    }
+    
+    button {
+        font-size: 1.1em;
+        padding: 10px 20px;
     }
 } 
